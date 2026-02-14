@@ -17,4 +17,11 @@
 ## Category-zhCN: 用户界面
 ## Category-zhTW: 使用者介面
 
+#@debug@
+## Dependencies: LiqUI
+#@end-debug@
+#@non-debug@
+# Libs\LiqUI\embed.xml
+#@end-non-debug@
+
 LiqMe.lua

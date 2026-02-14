@@ -1,0 +1,4 @@
+package-as: LiqMe
+
+externals:
+  Libs/LiqUI: https://github.com/DennisRas/LiqUI.git
