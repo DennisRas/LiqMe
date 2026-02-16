@@ -93,6 +93,7 @@ f.ADDON_LOADED = function(self, event, arg1)
           order = 1,
           args = {
             header = { type = "header", name = "LiqMe", order = 0 },
+            divider = { type = "divider", order = 1 },
             showActionBar = {
               type = "toggle",
               name = "Show action bar frame",
