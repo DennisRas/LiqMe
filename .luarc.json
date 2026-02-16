@@ -7,5 +7,7 @@
     "inject-field",
     "undefined-field"
   ],
-  "diagnostics.globals": []
+  "diagnostics.globals": [
+        "ReloadUI"
+    ]
 }
