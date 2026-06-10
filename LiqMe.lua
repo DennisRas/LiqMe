@@ -84,35 +84,17 @@ end
 f.ADDON_LOADED = function(self, event, arg1)
   if arg1 == addonName then
     LiqMeDB = LiqMeDB or {}
-    local options = {
-      type = "group",
-      args = {
-        general = {
-          type = "group",
-          name = "General",
-          order = 1,
-          args = {
-            header = { type = "header", name = "LiqMe", order = 0 },
-            divider = { type = "divider", order = 1 },
-            showActionBar = {
-              type = "toggle",
-              name = "Show action bar frame",
-              desc = "Show the frame around action bars",
-              get = function() return LiqMeDB.showActionBar ~= false end,
-              set = function(_, v)
-                LiqMeDB.showActionBar = v
-                f.renderActionBarFrame()
-              end,
-              order = 10,
-            },
-          },
-        },
-      },
-    }
-    LiqUI.Settings:Register(addonName, options, "LiqMe")
     SLASH_LIQME1 = "/liqme"
-    SlashCmdList.LIQME = function() LiqUI.Settings:Toggle() end
-    f.print("Addon loaded. /liqme to open settings.")
+    SlashCmdList.LIQME = function()
+      LiqMeDB.showActionBar = not (LiqMeDB.showActionBar ~= false)
+      f.renderActionBarFrame()
+      if LiqMeDB.showActionBar ~= false then
+        f.print("Action bar frame shown.")
+      else
+        f.print("Action bar frame hidden.")
+      end
+    end
+    f.print("Addon loaded. /liqme to toggle action bar frame.")
   end
 end
 
