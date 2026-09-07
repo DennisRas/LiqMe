@@ -7,6 +7,8 @@ local f = CreateFrame("Frame")
 local ActionBarFrame
 local UIHider
 
+local SKIN_ACTION_BARS = false
+
 local ICON_ZOOM_INSET = 0.07
 -- Shrink icon so it sits inside Blizzard's default highlight. Slot spacing is Edit Mode Icon Padding.
 local ICON_EDGE_INSET = 1
@@ -445,7 +447,9 @@ end
 f.ADDON_LOADED = function(self, event, arg1)
   if arg1 == addonName then
     LiqMeDB = LiqMeDB or {}
-    hookButtonArtUpdates()
+    if SKIN_ACTION_BARS then
+      hookButtonArtUpdates()
+    end
     SLASH_LIQME1 = "/liqme"
     SlashCmdList.LIQME = function()
       LiqMeDB.showActionBar = not (LiqMeDB.showActionBar ~= false)
@@ -461,10 +465,12 @@ f.ADDON_LOADED = function(self, event, arg1)
 end
 
 f.PLAYER_ENTERING_WORLD = function(self, event, ...)
-  hookButtonArtUpdates()
-  skinAllActionButtons()
-  hideActionBarChrome()
-  hideBagsAndMicroMenu()
+  if SKIN_ACTION_BARS then
+    hookButtonArtUpdates()
+    skinAllActionButtons()
+    hideActionBarChrome()
+    hideBagsAndMicroMenu()
+  end
   self.renderActionBarFrame()
   self.toggleCombatLog()
 end
