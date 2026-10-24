@@ -1,11 +1,17 @@
----@type string
-local addonName = select(1, ...)
 ---@class LM_Addon
 local addon = select(2, ...)
 
-local f = CreateFrame("Frame")
+---@class LM_Core
+local Core = addon.libs.AceAddon:NewAddon(addon.name, "AceConsole-3.0")
+addon.Core = Core
+
+local Data = addon.Data
+local LiqUI = addon.libs.LiqUI
+local Events = LiqUI.Events
+
 local ActionBarFrame
 local UIHider
+local buttonArtHooked = false
 
 local SKIN_ACTION_BARS = false
 
@@ -50,16 +56,22 @@ local ACTION_BARS = {
   "MultiBar7",
 }
 
---@debug@
-_G[addonName] = addon
---@end-debug@
+---@param message string
+local function say(message)
+  Core:Print(message)
+  if addon.logger then
+    addon.logger:Log(message)
+  end
+end
 
----@param button Button
+---@param button LM_ActionButton
+---@return FontString?
 local function getHotKey(button)
   return button.HotKey or (button.TextOverlayContainer and button.TextOverlayContainer.HotKey)
 end
 
----@param button Button
+---@param button LM_ActionButton
+---@return FontString?
 local function getCount(button)
   return button.Count or (button.TextOverlayContainer and button.TextOverlayContainer.Count)
 end
@@ -116,7 +128,7 @@ local function styleButtonText(fontString, size)
   fontString:SetShadowOffset(0, 0)
 end
 
----@param button Button
+---@param button LM_ActionButton
 local function styleActionButtonText(button)
   local icon = button.icon
   local hotKey = getHotKey(button)
@@ -170,7 +182,7 @@ local function styleActionButtonText(button)
   end
 end
 
----@param button Button
+---@param button LM_ActionButton
 local function formatActionButtonHotkey(button)
   local hotKey = getHotKey(button)
   if not hotKey then
@@ -200,7 +212,7 @@ local function applyButtonOverlay(texture, width, height, offsetX, offsetY)
   texture:SetPoint("TOPLEFT", offsetX or 0, offsetY or 0)
 end
 
----@param button Button
+---@param button LM_ActionButton?
 local function hideQualityOverlays(button)
   if not button then
     return
@@ -219,7 +231,7 @@ local function hideQualityOverlays(button)
   end
 end
 
----@param button Button
+---@param button LM_ActionButton?
 local function skinActionButton(button)
   if not button then
     return
@@ -279,13 +291,16 @@ end
 local function skinAllActionButtons()
   for _, prefix in ipairs(ACTION_BUTTON_PREFIXES) do
     for index = 1, 12 do
-      skinActionButton(_G[prefix .. index])
+      ---@type LM_ActionButton?
+      local button = _G[prefix .. index]
+      skinActionButton(button)
     end
   end
 end
 
 local function hideActionBarChrome()
   for _, barName in ipairs(ACTION_BARS) do
+    ---@type LM_ActionBar?
     local bar = _G[barName]
     if bar then
       bar.hideBarArt = true
@@ -302,7 +317,7 @@ local function hideActionBarChrome()
   end
 end
 
----@param frame Frame?
+---@param frame LM_BlizzardBar?
 local function hideBlizzardFrame(frame)
   if not frame then
     return
@@ -321,66 +336,95 @@ local function hideBagsAndMicroMenu()
     UIHider:Hide()
   end
 
-  hideBlizzardFrame(_G.BagsBar)
-  hideBlizzardFrame(_G.MicroMenu)
-  hideBlizzardFrame(_G.MicroButtonAndBagsBar)
+  ---@type LM_BlizzardBar?
+  local bagsBar = _G.BagsBar
+  ---@type LM_BlizzardBar?
+  local microMenu = _G.MicroMenu
+  ---@type LM_BlizzardBar?
+  local microButtonAndBagsBar = _G.MicroButtonAndBagsBar
+  hideBlizzardFrame(bagsBar)
+  hideBlizzardFrame(microMenu)
+  hideBlizzardFrame(microButtonAndBagsBar)
+end
+
+---@param button LM_ActionButton
+local function onUpdateButtonArt(button)
+  skinActionButton(button)
+end
+
+---@param button LM_ActionButton
+local function onUpdateProfessionQuality(button)
+  if button.ClearProfessionQuality then
+    button:ClearProfessionQuality()
+  end
+  hideQualityOverlays(button)
+end
+
+---@param button LM_ActionButton
+local function onActionButtonUpdate(button)
+  hideQualityOverlays(button)
+end
+
+---@param button LM_ActionButton
+local function onUpdateHotkeys(button)
+  formatActionButtonHotkey(button)
+  styleActionButtonText(button)
+end
+
+---@param button LM_ActionButton
+local function onUpdateCount(button)
+  styleActionButtonText(button)
+end
+
+local function onHideBarArt()
+  hideActionBarChrome()
+end
+
+local function onResetMicroMenuPosition()
+  hideBagsAndMicroMenu()
 end
 
 local function hookButtonArtUpdates()
-  if f.buttonArtHooked then
+  if buttonArtHooked then
     return
   end
   if BaseActionButtonMixin and BaseActionButtonMixin.UpdateButtonArt then
-    hooksecurefunc(BaseActionButtonMixin, "UpdateButtonArt", function(button)
-      skinActionButton(button)
-    end)
+    hooksecurefunc(BaseActionButtonMixin, "UpdateButtonArt", onUpdateButtonArt)
   end
   if ActionBarActionButtonMixin then
     -- Crafting-quality gem (bronze/silver/gold) on item actions — never show it.
-    ActionBarActionButtonMixin.UpdateProfessionQuality = function(button)
-      if button.ClearProfessionQuality then
-        button:ClearProfessionQuality()
-      end
-      hideQualityOverlays(button)
-    end
+    ActionBarActionButtonMixin.UpdateProfessionQuality = onUpdateProfessionQuality
     if ActionBarActionButtonMixin.Update then
-      hooksecurefunc(ActionBarActionButtonMixin, "Update", function(button)
-        hideQualityOverlays(button)
-      end)
+      hooksecurefunc(ActionBarActionButtonMixin, "Update", onActionButtonUpdate)
     end
     if ActionBarActionButtonMixin.UpdateHotkeys then
-      hooksecurefunc(ActionBarActionButtonMixin, "UpdateHotkeys", function(button)
-        formatActionButtonHotkey(button)
-        styleActionButtonText(button)
-      end)
+      hooksecurefunc(ActionBarActionButtonMixin, "UpdateHotkeys", onUpdateHotkeys)
     end
     if ActionBarActionButtonMixin.UpdateCount then
-      hooksecurefunc(ActionBarActionButtonMixin, "UpdateCount", function(button)
-        styleActionButtonText(button)
-      end)
+      hooksecurefunc(ActionBarActionButtonMixin, "UpdateCount", onUpdateCount)
     end
   end
   if EditModeActionBarSystemMixin and EditModeActionBarSystemMixin.UpdateSystemSettingHideBarArt then
-    hooksecurefunc(EditModeActionBarSystemMixin, "UpdateSystemSettingHideBarArt", function()
-      hideActionBarChrome()
-    end)
+    hooksecurefunc(EditModeActionBarSystemMixin, "UpdateSystemSettingHideBarArt", onHideBarArt)
   end
   if MicroMenu and MicroMenu.ResetMicroMenuPosition then
-    hooksecurefunc(MicroMenu, "ResetMicroMenuPosition", function()
-      hideBagsAndMicroMenu()
-    end)
+    hooksecurefunc(MicroMenu, "ResetMicroMenuPosition", onResetMicroMenuPosition)
   end
-  f.buttonArtHooked = true
+  buttonArtHooked = true
 end
 
-f.renderActionBarFrame = function()
+local function renderActionBarFrame()
   local offset = 4
+  ---@type Frame?
   local MainBar = _G["MainActionBar"]
+  ---@type Frame?
   local TopBar = _G["MultiBarBottomRight"]
 
   -- Detect Bartender
   if C_AddOns.IsAddOnLoaded("Bartender4") then
+    ---@type Frame?
     local BT4Bar1 = _G["BT4Button1"]
+    ---@type Frame?
     local BT4Bar6 = _G["BT4Button60"]
     if (BT4Bar6 and BT4Bar1) then
       MainBar = BT4Bar1
@@ -389,7 +433,7 @@ f.renderActionBarFrame = function()
   end
 
   if (not MainBar or not TopBar) then
-    f.print("No ActionBars found")
+    say("No ActionBars found")
     return
   end
 
@@ -412,69 +456,65 @@ f.renderActionBarFrame = function()
     ActionBarFrame:SetBackdropColor(0, 0, 0, 0.8)
     ActionBarFrame:SetBackdropBorderColor(0, 0, 0, 1)
   end
-  if LiqMeDB and LiqMeDB.showActionBar ~= false then
+  if Data.db.global.showActionBar ~= false then
     ActionBarFrame:Show()
   else
     ActionBarFrame:Hide()
   end
 end
 
-f.print = function(...)
-  print("|cff67AFD6" .. addonName .. ":|r", ...)
-end
-
-f.toggleCombatLog = function()
+local function toggleCombatLog()
   local inInstance, instanceType = IsInInstance()
   local logEnabled = LoggingCombat()
   if inInstance and (instanceType == "party" or instanceType == "raid") then
     if not logEnabled then
       LoggingCombat(true)
-      f.print("Logging enabled")
+      say("Logging enabled")
     end
   else
     if logEnabled then
       LoggingCombat(false)
-      f.print("Logging disabled")
+      say("Logging disabled")
     end
   end
 end
 
-f.OnEvent = function(self, event, ...)
-  if self[event] == nil then return end
-  self[event](self, event, ...)
-end
-
-f.ADDON_LOADED = function(self, event, arg1)
-  if arg1 == addonName then
-    LiqMeDB = LiqMeDB or {}
-    if SKIN_ACTION_BARS then
-      hookButtonArtUpdates()
-    end
-    SLASH_LIQME1 = "/liqme"
-    SlashCmdList.LIQME = function()
-      LiqMeDB.showActionBar = not (LiqMeDB.showActionBar ~= false)
-      f.renderActionBarFrame()
-      if LiqMeDB.showActionBar ~= false then
-        f.print("Action bar frame shown.")
-      else
-        f.print("Action bar frame hidden.")
-      end
-    end
-    f.print("Addon loaded. /liqme to toggle action bar frame.")
-  end
-end
-
-f.PLAYER_ENTERING_WORLD = function(self, event, ...)
+---@param _frame Frame
+---@param _event string
+local function onPlayerEnteringWorld(_frame, _event)
   if SKIN_ACTION_BARS then
     hookButtonArtUpdates()
     skinAllActionButtons()
     hideActionBarChrome()
     hideBagsAndMicroMenu()
   end
-  self.renderActionBarFrame()
-  self.toggleCombatLog()
+  renderActionBarFrame()
+  toggleCombatLog()
 end
 
-f:RegisterEvent("ADDON_LOADED")
-f:RegisterEvent("PLAYER_ENTERING_WORLD")
-f:SetScript("OnEvent", f.OnEvent)
+function Core:OnInitialize()
+  Data:Initialize()
+  ---@type LiqUI_NewLoggerOptions
+  local loggerOptions = {
+    name = addon.name,
+    title = addon.title,
+    storage = Data.db.global.logs,
+  }
+  addon.logger = LiqUI:NewLogger(loggerOptions)
+  self:RegisterChatCommand(addon.name:lower(), "OnChatCommand")
+end
+
+function Core:OnEnable()
+  Events:RegisterEvent("PLAYER_ENTERING_WORLD", onPlayerEnteringWorld, true)
+  say("Addon loaded. /liqme to toggle the action bar frame.")
+end
+
+function Core:OnChatCommand()
+  Data.db.global.showActionBar = Data.db.global.showActionBar == false
+  renderActionBarFrame()
+  if Data.db.global.showActionBar then
+    say("Action bar frame shown.")
+  else
+    say("Action bar frame hidden.")
+  end
+end

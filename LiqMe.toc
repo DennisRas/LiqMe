@@ -2,19 +2,23 @@
 ## Title: LiqMe
 ## Notes: Lick it!
 ## Version: 1.0.0
-## Author: Liquidor (EU Silvermoon)
+## Author: Liquidor
 ## SavedVariables: LiqMeDB
 ## X-Website: https://github.com/DennisRas/LiqMe
-## Category: User Interface
-## Category-deDE: Benutzerinterface
-## Category-esES: Interfaz de usuario
-## Category-esMX: Interfaz de usuario
-## Category-frFR: Interface utilisateur
-## Category-itIT: Interfaccia utente
-## Category-koKR: 사용자 인터페이스
-## Category-ptBR: Interface do usuário
-## Category-ruRU: Интерфейс пользователя
-## Category-zhCN: 用户界面
-## Category-zhTW: 使用者介面
 
+Libs\LibStub\LibStub.lua
+Libs\CallbackHandler-1.0\CallbackHandler-1.0.xml
+Libs\LiqUI\LiqUI.xml
+Libs\AceAddon-3.0\AceAddon-3.0.xml
+Libs\AceDB-3.0\AceDB-3.0.xml
+Libs\AceConsole-3.0\AceConsole-3.0.xml
+
+Boot.lua
+Data.lua
 LiqMe.lua
+
+#@debug@
+Debug\Types\ActionBar.lua
+Debug\Types\Addon.lua
+Debug\Types\Data.lua
+#@end-debug@
